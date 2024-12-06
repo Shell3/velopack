@@ -109,6 +109,10 @@ impl SplashWindow {
                 frames.push(bitmap);
             }
             info!("Successfully loaded {} frames.", frames.len());
+            match repeat {
+                gif::Repeat::Infinite => info!("Gif repeats infinte times."),
+                gif::Repeat::Finite(value) => info!("Gif repeats {} times.", value)
+            }
         } else {
             info!("Loading static image (detected {:?})...", fmt);
             delays.push(16); // 60 fps
@@ -210,12 +214,13 @@ impl SplashWindow {
             let mut current_repeat = self2.repeat_current.borrow_mut();
             let repeat_setting = self2.repeat;
 
+            info!("Current repeat: {}", current_repeat);
+
             let mut can_loop = false;
 
             if let gif::Repeat::Finite(value) = repeat_setting {
                 if *current_repeat < value {
                     can_loop = true;
-                    *current_repeat += 1;
                 }
             } else {
                 can_loop = true;
@@ -225,6 +230,7 @@ impl SplashWindow {
                 *idx += 1;
                 if *idx >= self2.frames.len() {
                     *idx = 0;
+                    *current_repeat += 1;
                 }
             }
             
