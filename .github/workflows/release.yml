@@ -154,7 +154,7 @@ jobs:
               "tag_name" = "$currentTag"
               "previous_tag_name" = "$previousTag"
           } | ConvertTo-Json
-          $apiUrl = "https://api.github.com/repos/velopack/velopack/releases/generate-notes"
+          $apiUrl = "https://api.github.com/repos/Shell3/velopack/releases/generate-notes"
           $response = Invoke-RestMethod -Uri $apiUrl -Method Post -Headers $headers -Body $body -ContentType 'application/json'
 
           $releaseName = $response.name
@@ -202,25 +202,3 @@ jobs:
           gh release upload $currentTag (get-item ../lib-nodejs/*.tgz)
           gh release upload $currentTag (get-item ../lib-rust/*.crate)
           gh release upload $currentTag (get-item ../lib-c/*.zip)
-
-      - name: Publish NuGet Packages
-        run: |
-          for f in packages/*.nupkg; do
-            dotnet nuget push "$f" -k ${{ secrets.NUGET_API_KEY }} -s https://api.nuget.org/v3/index.json --skip-duplicate
-          done
-          
-      - name: Publish NPM Package
-        working-directory: ./lib-nodejs
-        run: |
-          npm set "//registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}"
-          npm publish velopack-$PKG_VERSION.tgz --access public
-          
-      - name: Publish Rust Crate
-        working-directory: ./lib-rust
-        run: |
-          tar -xzf velopack-$PKG_VERSION.crate
-          cd velopack-$PKG_VERSION
-          rm Cargo.toml.orig
-          rm .cargo_vcs_info.json
-          cargo login ${{ secrets.CARGO_TOKEN }}
-          cargo publish --allow-dirty --no-verify
