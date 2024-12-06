@@ -213,7 +213,7 @@ impl SplashWindow {
             let mut can_loop = false;
 
             if let gif::Repeat::Finite(value) = repeat_setting {
-                if *current_repeat <= value {
+                if *current_repeat < value {
                     can_loop = true;
                     *current_repeat += 1;
                 }
