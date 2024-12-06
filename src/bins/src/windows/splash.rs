@@ -11,6 +11,7 @@ use std::{
 };
 use winsafe::guard::DeleteObjectGuard;
 use winsafe::{self as w, co, gui, prelude::*, WString};
+use gif::Decoder;
 
 const TMR_GIF: usize = 1;
 const MSG_NOMESSAGE: i16 = -99;
@@ -54,6 +55,8 @@ pub struct SplashWindow {
     delay: u16,
     progress: Rc<RefCell<i16>>,
     frame_idx: Rc<RefCell<usize>>,
+    repeat: gif::Repeat,
+    repeat_current: Rc<RefCell<u16>>,
     w: u16,
     h: u16,
 }
@@ -85,10 +88,15 @@ impl SplashWindow {
         let w: u16 = u16::try_from(dims.0)?;
         let h: u16 = u16::try_from(dims.1)?;
 
+        let repeat;
+
         if Some(ImageFormat::Gif) == fmt {
             info!("Image is animated GIF ({}x{}), loading frames...", w, h);
             let gif_cursor = Cursor::new(&img_stream);
+            let gif_cursor2 = Cursor::new(&img_stream);
             let decoder = GifDecoder::new(gif_cursor)?;
+            let decoder2 = Decoder::new(gif_cursor2)?;
+            repeat = decoder2.repeat();
             let dec_frames = decoder.into_frames();
             for frame in dec_frames.into_iter() {
                 let frame = frame?;
@@ -111,6 +119,7 @@ impl SplashWindow {
             let bitmap = w::HBITMAP::CreateBitmap(winsafe::SIZE { cx: w.into(), cy: h.into() }, 1, 32, vec.as_mut_ptr() as *mut u8)?;
             frames.push(bitmap);
             info!("Successfully loaded.");
+            repeat = gif::Repeat::Infinite;
         }
 
         // TODO: only support a fixed frame delay for now. Maybe should
@@ -133,7 +142,8 @@ impl SplashWindow {
         let rx = Rc::new(rx);
         let progress = Rc::new(RefCell::new(0));
         let frame_idx = Rc::new(RefCell::new(0));
-        let mut new_self = Self { wnd, frames, delay, frame_idx, w, h, rx, progress };
+        let repeat_current = Rc::new(RefCell::new(0));
+        let mut new_self = Self { wnd, frames, delay, frame_idx, repeat, repeat_current, w, h, rx, progress };
         new_self.events();
         Ok(new_self)
     }
@@ -196,11 +206,28 @@ impl SplashWindow {
             // retrieve the next frame to draw
             let mut idx = self2.frame_idx.borrow_mut();
             let h_bitmap = self2.frames[*idx].deref();
-            *idx += 1;
-            if *idx >= self2.frames.len() {
-                *idx = 0;
+
+            let mut current_repeat = self2.repeat_current.borrow_mut();
+            let repeat_setting = self2.repeat;
+
+            let mut can_loop = false;
+
+            if let gif::Repeat::Finite(value) = repeat_setting {
+                if *current_repeat <= value {
+                    can_loop = true;
+                    *current_repeat += 1;
+                }
+            } else {
+                can_loop = true;
             }
 
+            if *idx < self2.frames.len() || can_loop {
+                *idx += 1;
+                if *idx >= self2.frames.len() {
+                    *idx = 0;
+                }
+            }
+            
             // create double buffer
             let hdc_mem = hdc_screen.CreateCompatibleDC()?;
             let buffer_bmp = hdc_screen.CreateCompatibleBitmap(w, h)?;

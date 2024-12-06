@@ -106,6 +106,7 @@ libloading.workspace = true
 strsim.workspace = true
 same-file.workspace = true
 # filelocksmith.workspace = true
+gif = "0.13.1"
 
 [dev-dependencies]
 tempfile.workspace = true

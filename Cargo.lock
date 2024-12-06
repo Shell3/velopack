@@ -2302,6 +2302,7 @@ dependencies = [
  "enum-flags",
  "file-rotate",
  "fs_extra",
+ "gif",
  "glob",
  "image",
  "lazy_static",
